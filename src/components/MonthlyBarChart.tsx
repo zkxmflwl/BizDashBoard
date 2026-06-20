@@ -53,13 +53,16 @@ export default function MonthlyBarChart({ year, departmentCodes, mode = 'cumulat
 
   const yDomain = useMemo<[number, number]>(() => {
     if (!data || data.length === 0) return [0, 0];
+    const STEP = 5_000_000_000; // 50억 단위
     let min = 0;
     let max = 0;
     for (const d of data) {
       min = Math.min(min, d.sales, d.purchase, d.netSales);
       max = Math.max(max, d.sales, d.purchase, d.netSales);
     }
-    return [Math.min(min, 0), max * 1.1];
+    const maxRounded = max > 0 ? Math.ceil(max / STEP) * STEP : 0;
+    const minRounded = min < 0 ? Math.floor(min / STEP) * STEP : 0;
+    return [minRounded, maxRounded];
   }, [data]);
 
   if (isLoading) {
