@@ -1,73 +1,51 @@
-# Welcome to your Lovable project
+# BizDashboard
 
-## Project info
+사내 경영 현황 대시보드입니다. 부서별 매출·매입·인원, 사업부 프로젝트, 부문 프로젝트 진행률, IT 유형·무형자산을 Supabase에 저장하고 역할(ADMIN / MANAGER / VIEWER)에 따라 조회·편집합니다.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 기술 스택
 
-## How can I edit this code?
+- Vite + React 18 + TypeScript
+- shadcn-ui (Radix), Tailwind CSS, Recharts
+- Supabase (PostgreSQL, Auth, Edge Functions)
+- TanStack React Query
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## 로컬 실행
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm install
+cp .env.example .env   # 값을 실제 Supabase 프로젝트 정보로 채웁니다
+npm run dev            # http://localhost:8080
 ```
 
-**Edit a file directly in GitHub**
+## 환경변수 (.env)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| 변수 | 설명 |
+|---|---|
+| `VITE_SUPABASE_PROJECT_ID` | Supabase 프로젝트 ref |
+| `VITE_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | 공개용 publishable 키 (`sb_publishable_...`) |
 
-**Use GitHub Codespaces**
+`.env`는 git에 포함하지 않습니다. 배포 환경에서는 동일한 변수를 호스팅 설정에 등록합니다.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 스크립트
 
-## What technologies are used for this project?
+| 명령 | 설명 |
+|---|---|
+| `npm run dev` | 개발 서버 |
+| `npm run build` | 프로덕션 빌드 (`dist/`) |
+| `npm run lint` | ESLint |
+| `npm run test` | Vitest |
 
-This project is built with:
+## Supabase
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- 스키마: `supabase/migrations/`
+- 엣지 함수: `supabase/functions/admin-users` (관리자 전용 사용자 생성·관리, 서비스 롤 키 사용)
+- 프로젝트 ref: `supabase/config.toml`
 
-## How can I deploy this project?
+## 화면 구성
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- 대시보드: 월별 YTD 매출·매입·순매출, 전년 대비, 부서별 그리드와 월별 차트
+- 사업부: 월간 보고, 월별 데이터 입력(엑셀 업로드), 프로젝트 데이터
+- 전략: 부문 프로젝트 현황·관리
+- 총무: IT 유형자산·무형자산 관리
+- 관리자: 부서 관리, 사용자 관리

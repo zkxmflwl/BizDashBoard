@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# MCP config (contains access tokens)
+.mcp.json
+
+# Environment / Supabase CLI temp
+.env
+supabase/.temp/
