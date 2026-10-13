@@ -298,9 +298,15 @@ export default function Dashboard() {
                   <td className="border-r border-border/50 px-3 py-2 text-foreground font-medium whitespace-nowrap">
                     {row.departmentName}
                     {isNewDepartment(row.establishedMonth, activeYear) && (
-                      <span className="ml-1.5 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-normal text-emerald-700" title="전년 동기 데이터가 없는 신설·분리 부서">
-                        신설 {row.establishedMonth}
-                      </span>
+                      row.predecessorCode ? (
+                        <span className="ml-1.5 rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-normal text-sky-700" title={`${row.establishedMonth}에 ${row.predecessorName}에서 분리. 전년 동기 실적은 ${row.predecessorName}에 포함되어 있어 비교하지 않음`}>
+                          {row.predecessorName}에서 분리 ({row.establishedMonth})
+                        </span>
+                      ) : (
+                        <span className="ml-1.5 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-normal text-emerald-700" title="전년 동기 데이터가 없는 신설 부서">
+                          신설 ({row.establishedMonth})
+                        </span>
+                      )
                     )}
                     {row.isRestricted && (
                       <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-normal text-amber-700">자회사</span>
@@ -313,15 +319,11 @@ export default function Dashboard() {
                     {row.yoyChange === null ? (
                       <span className="text-muted-foreground" title="전년 동기 데이터 없음 (신설·분리 부서)">-</span>
                     ) : (
-                      <span className="whitespace-nowrap">
-                        <span className={row.yoyChange > 0 ? 'text-red-500' : row.yoyChange < 0 ? 'text-blue-500' : 'text-foreground'}>
-                          {row.yoyChange > 0 ? '+' : ''}{formatDashboardAmount(row.yoyChange)}
-                        </span>
-                        {row.yoyIncludes.length > 0 && (
-                          <span className="ml-1 text-[10px] text-muted-foreground" title="분리 전 범위와 비교하기 위해 승계 부서의 당해 누적을 합산한 값">
-                            ({row.yoyIncludes.join(', ')} 포함)
-                          </span>
-                        )}
+                      <span
+                        className={`whitespace-nowrap ${row.yoyChange > 0 ? 'text-red-500' : row.yoyChange < 0 ? 'text-blue-500' : 'text-foreground'}`}
+                        title={row.yoyIncludes.length > 0 ? `전년 실적에 포함되어 있던 ${row.yoyIncludes.join(', ')}의 당해 누적을 합산해 분리 전 범위로 비교한 값` : undefined}
+                      >
+                        {row.yoyChange > 0 ? '+' : ''}{formatDashboardAmount(row.yoyChange)}
                       </span>
                     )}
                   </td>

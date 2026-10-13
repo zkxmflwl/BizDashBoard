@@ -34,6 +34,9 @@ export interface DeptSummaryRow {
   yoyIncludes: string[];
   /** 신설·분리 시점 (YYYY-MM) */
   establishedMonth: string | null;
+  /** 분리 전 모부서 (없으면 신설) */
+  predecessorCode: string | null;
+  predecessorName: string | null;
   /** 제한 부서(자회사) 여부 */
   isRestricted: boolean;
   activeProjects: number;
@@ -147,6 +150,8 @@ export async function fetchDeptSummary(monthKey: string): Promise<DeptSummaryRow
       yoyChange: null,
       yoyIncludes: [],
       establishedMonth: null,
+      predecessorCode: null,
+      predecessorName: null,
       isRestricted: false,
       activeProjects: 0,
       monthlyOrders: 0,
@@ -208,6 +213,8 @@ export async function fetchDeptSummary(monthKey: string): Promise<DeptSummaryRow
   for (const [code, d] of depts) {
     const meta = deptMeta.get(code);
     d.establishedMonth = meta?.established_month ?? null;
+    d.predecessorCode = meta?.predecessor_code ?? null;
+    d.predecessorName = meta?.predecessor_code ? (deptMeta.get(meta.predecessor_code)?.department_name ?? meta.predecessor_code) : null;
     d.isRestricted = meta?.is_restricted ?? false;
 
     if (isNewDepartment(meta?.established_month, y)) {
