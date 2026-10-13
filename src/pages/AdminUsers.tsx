@@ -32,7 +32,20 @@ interface EditableUser {
   role_code: RoleCode;
   department_code: string | null;
   is_active: boolean;
+  /** 열람 허용된 제한 부서 코드 */
+  restricted_dept_codes: string[];
+  /** 접근 허용된 화면 기능 */
+  feature_access: string[];
 }
+
+/** 화면 기능 권한 목록 (feature_access 값과 표시명) */
+const FEATURES: { key: string; label: string }[] = [
+  { key: 'sales_overview', label: '영업 현황' },
+];
+
+const sameSet = (a: string[], b: string[]) => [...a].sort().join(',') === [...b].sort().join(',');
+const toggleIn = (list: string[], value: string, on: boolean) =>
+  on ? Array.from(new Set([...list, value])) : list.filter(v => v !== value);
 
 export default function AdminUsers() {
   const queryClient = useQueryClient();
@@ -62,10 +75,15 @@ export default function AdminUsers() {
         role_code: u.role_code as RoleCode,
         department_code: u.department_code,
         is_active: u.is_active,
+        restricted_dept_codes: u.restricted_dept_codes ?? [],
+        feature_access: u.feature_access ?? [],
       };
     }
     return m;
   }, [users]);
+
+  // 제한 부서 목록 (ADMIN은 모든 부서를 볼 수 있으므로 여기서 바로 조회됨)
+  const restrictedDepts = useMemo(() => departments.filter(d => d.is_restricted), [departments]);
 
   // Sync editMap when server data changes
   useEffect(() => {
@@ -79,7 +97,13 @@ export default function AdminUsers() {
       const orig = originalMap[uid];
       const edit = editMap[uid];
       if (!orig || !edit) continue;
-      if (orig.role_code !== edit.role_code || orig.department_code !== edit.department_code || orig.is_active !== edit.is_active) {
+      if (
+        orig.role_code !== edit.role_code ||
+        orig.department_code !== edit.department_code ||
+        orig.is_active !== edit.is_active ||
+        !sameSet(orig.restricted_dept_codes, edit.restricted_dept_codes) ||
+        !sameSet(orig.feature_access, edit.feature_access)
+      ) {
         dirty.push(uid);
       }
     }
@@ -105,11 +129,12 @@ export default function AdminUsers() {
   const getChangedFields = (uid: string) => {
     const orig = originalMap[uid];
     const edit = editMap[uid];
-    if (!orig || !edit) return { role: false, dept: false, active: false };
+    if (!orig || !edit) return { role: false, dept: false, active: false, perms: false };
     return {
       role: orig.role_code !== edit.role_code,
       dept: orig.department_code !== edit.department_code,
       active: orig.is_active !== edit.is_active,
+      perms: !sameSet(orig.restricted_dept_codes, edit.restricted_dept_codes) || !sameSet(orig.feature_access, edit.feature_access),
     };
   };
 
@@ -135,6 +160,14 @@ export default function AdminUsers() {
           try {
             await callAdminAction('toggle-active', { auth_user_id: uid, is_active: edit.is_active });
           } catch (e: any) { errors.push(`상태 변경(${uid}): ${e.message}`); }
+        }
+        if (changed.perms) {
+          // ADMIN은 RLS 정책(dash_users_update_admin)으로 직접 갱신 가능
+          const { error } = await supabase
+            .from('dash_users')
+            .update({ restricted_dept_codes: edit.restricted_dept_codes, feature_access: edit.feature_access })
+            .eq('auth_user_id', uid);
+          if (error) errors.push(`권한 항목 변경(${uid}): ${error.message}`);
         }
       }
       if (errors.length > 0) {
@@ -278,6 +311,8 @@ export default function AdminUsers() {
                 <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground">권한</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground">부서</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground">상태</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground" title="제한 부서(자회사 등) 데이터 열람·입력 허용">제한 부서 열람</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground" title="특정 화면 접근 허용">화면 권한</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground">관리</th>
               </tr>
             </thead>
@@ -286,8 +321,9 @@ export default function AdminUsers() {
                 const edit = editMap[u.auth_user_id];
                 if (!edit) return null;
                 const changed = getChangedFields(u.auth_user_id);
-                const isDirty = changed.role || changed.dept || changed.active;
+                const isDirty = changed.role || changed.dept || changed.active || changed.perms;
                 const self = isSelf(u.auth_user_id);
+                const isAdminRole = edit.role_code === 'ADMIN';
 
                 return (
                   <tr key={u.auth_user_id}
@@ -322,6 +358,42 @@ export default function AdminUsers() {
                         className={`rounded px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60 ${edit.is_active ? 'bg-emerald-900/50 text-emerald-400' : 'bg-red-900/50 text-red-400'} ${changed.active ? 'ring-2 ring-primary/50' : ''}`}>
                         {edit.is_active ? '활성' : '비활성'}
                       </button>
+                    </td>
+                    <td className={`px-4 py-3 ${changed.perms ? 'bg-primary/5' : ''}`}>
+                      {isAdminRole ? (
+                        <span className="text-xs text-muted-foreground">전체 (ADMIN)</span>
+                      ) : restrictedDepts.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-3">
+                          {restrictedDepts.map(d => (
+                            <label key={d.department_code} className="flex cursor-pointer items-center gap-1 text-xs text-foreground">
+                              <input type="checkbox"
+                                checked={edit.restricted_dept_codes.includes(d.department_code)}
+                                onChange={(e) => updateField(u.auth_user_id, 'restricted_dept_codes', toggleIn(edit.restricted_dept_codes, d.department_code, e.target.checked))}
+                                className="h-3.5 w-3.5 rounded border-border accent-primary" />
+                              {d.department_name}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className={`px-4 py-3 ${changed.perms ? 'bg-primary/5' : ''}`}>
+                      {isAdminRole ? (
+                        <span className="text-xs text-muted-foreground">전체 (ADMIN)</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-3">
+                          {FEATURES.map(f => (
+                            <label key={f.key} className="flex cursor-pointer items-center gap-1 text-xs text-foreground">
+                              <input type="checkbox"
+                                checked={edit.feature_access.includes(f.key)}
+                                onChange={(e) => updateField(u.auth_user_id, 'feature_access', toggleIn(edit.feature_access, f.key, e.target.checked))}
+                                className="h-3.5 w-3.5 rounded border-border accent-primary" />
+                              {f.label}
+                            </label>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => handleResetPassword(u.auth_user_id)}

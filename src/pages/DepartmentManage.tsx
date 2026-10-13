@@ -16,8 +16,10 @@ type SortDir = 'asc' | 'desc' | null;
 interface ColDef {
   key: string;
   label: string;
-  type: 'text';
+  type: 'text' | 'select' | 'boolean';
 }
+
+const MONTH_KEY_RE = /^\d{4}-\d{2}$/;
 
 export default function DepartmentManage() {
   const { hasPermission } = useAuth();
@@ -35,6 +37,9 @@ export default function DepartmentManage() {
         sector_name: '',
         is_active: true,
         sort_order: 100,
+        predecessor_code: null,
+        established_month: null,
+        is_restricted: false,
       }),
     },
   );
@@ -53,10 +58,14 @@ export default function DepartmentManage() {
     { key: 'sector_name', label: '부문명', type: 'text' },
     { key: 'department_code', label: '부서코드', type: 'text' },
     { key: 'department_name', label: '부서명', type: 'text' },
+    { key: 'predecessor_code', label: '모부서(분리 전)', type: 'select' },
+    { key: 'established_month', label: '신설·분리월(YYYY-MM)', type: 'text' },
+    { key: 'is_restricted', label: '제한 부서(권한자만 열람)', type: 'boolean' },
   ];
 
   const getDisplayValue = useCallback((row: GridRow<Department>, col: ColDef): string => {
     const val = (row.data as any)[col.key];
+    if (col.type === 'boolean') return val ? 'Y' : '';
     return val == null ? '' : String(val);
   }, []);
 
@@ -102,50 +111,27 @@ export default function DepartmentManage() {
 
   const handleSave = async () => {
     const { inserts, updates, deletes } = getChanges();
-    console.log('before save loop');
-    for (const r of updates) {
-      console.log('update row:', r);
-
-      const originalCode = rows.find(row => row.data === r)?.tempId;
-      console.log('originalCode:', originalCode);
-
-    const updatePayload: any = {
-        department_name: r.department_name,
-        sector_code: r.sector_code || null,
-        sector_name: r.sector_name || null,
-        sort_order: r.sort_order ?? 100,
-      };
-
-      if (originalCode && originalCode !== r.department_code) {
-        updatePayload.department_code = r.department_code;
-      }
-
-      console.log('updatePayload:', updatePayload);
-      console.log('eq code:', originalCode || r.department_code);
-
-      const { error } = await supabase
-        .from('departments')
-        .update(updatePayload)
-        .eq('department_code', originalCode || r.department_code)
-        .select('department_code');
-
-      console.log('after update query', error);
-
-      if (error) throw error;
-    }
-    console.log('after save loop');
-    for (const r of inserts) {
+    for (const r of [...inserts, ...updates]) {
       if (!r.department_code?.trim() || !r.department_name?.trim()) {
         toast.error('부서코드와 부서명은 필수입니다.');
         return;
       }
-    }
-    for (const r of updates) {
-      if (!r.department_code?.trim() || !r.department_name?.trim()) {
-        toast.error('부서코드와 부서명은 필수입니다.');
+      if (r.established_month && !MONTH_KEY_RE.test(r.established_month)) {
+        toast.error(`신설·분리월은 YYYY-MM 형식이어야 합니다. (${r.department_code})`);
+        return;
+      }
+      if (r.predecessor_code && r.predecessor_code === r.department_code) {
+        toast.error(`모부서는 자기 자신일 수 없습니다. (${r.department_code})`);
         return;
       }
     }
+
+    // 승계·제한 컬럼 공통 payload
+    const lineagePayload = (r: Department) => ({
+      predecessor_code: r.predecessor_code || null,
+      established_month: r.established_month || null,
+      is_restricted: !!r.is_restricted,
+    });
 
     setSaving(true);
     try {
@@ -157,6 +143,7 @@ export default function DepartmentManage() {
           sector_name: r.sector_name || null,
           is_active: true,
           sort_order: r.sort_order ?? 100,
+          ...lineagePayload(r),
         }));
         const { error } = await supabase.from('departments').insert(insertData);
         if (error) throw error;
@@ -164,11 +151,12 @@ export default function DepartmentManage() {
       for (const r of updates) {
         // tempId holds the original department_code
         const originalCode = rows.find(row => row.data === r)?.tempId;
-      const updatePayload: any = {
+        const updatePayload: any = {
           department_name: r.department_name,
           sector_code: r.sector_code || null,
           sector_name: r.sector_name || null,
           sort_order: r.sort_order ?? 100,
+          ...lineagePayload(r),
         };
         // If department_code changed, update it too (CASCADE will propagate)
         if (originalCode && originalCode !== r.department_code) {
@@ -215,7 +203,28 @@ export default function DepartmentManage() {
     const disabled = !canEdit || row.status === 'deleted';
 
     if (!canEdit) {
-      return <span className="text-xs text-foreground">{val || '-'}</span>;
+      return <span className="text-xs text-foreground">{getDisplayValue(row, col) || '-'}</span>;
+    }
+
+    if (col.type === 'boolean') {
+      return (
+        <input type="checkbox" checked={!!val} disabled={disabled}
+          onChange={(e) => updateCell(row.tempId, col.key as any, e.target.checked)}
+          className="h-3.5 w-3.5 rounded border-border accent-primary disabled:opacity-40" />
+      );
+    }
+
+    if (col.type === 'select') {
+      return (
+        <select value={val ?? ''} disabled={disabled}
+          onChange={(e) => updateCell(row.tempId, col.key as any, e.target.value || null)}
+          className="w-full min-w-[110px] bg-transparent px-1 py-0.5 text-xs text-foreground disabled:opacity-40 focus:outline-none focus:ring-1 focus:ring-primary rounded">
+          <option value="">-</option>
+          {departments
+            .filter(d => d.department_code !== row.data.department_code)
+            .map(d => <option key={d.department_code} value={d.department_code}>{d.department_name}</option>)}
+        </select>
+      );
     }
 
     return (

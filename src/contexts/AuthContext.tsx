@@ -21,6 +21,10 @@ export interface DashUser {
   department_code: string | null;
   is_active: boolean;
   must_change_password: boolean;
+  /** 열람 허용된 제한 부서 코드 (예: ['KSPI']) */
+  restricted_dept_codes: string[];
+  /** 접근 허용된 화면 기능 (예: ['sales_overview']). ADMIN은 전부 허용 */
+  feature_access: string[];
 }
 
 interface AuthContextType {
@@ -31,6 +35,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
   hasPermission: (required: RoleCode) => boolean;
+  /** 화면 기능 접근 여부. ADMIN은 항상 true */
+  hasFeature: (feature: string) => boolean;
   refreshDashUser: () => Promise<void>;
 }
 
@@ -300,6 +306,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return roleLevel[dashUser.role_code] >= roleLevel[required];
   };
 
+  const hasFeature = (feature: string): boolean => {
+    if (!dashUser) return false;
+    if (dashUser.role_code === "ADMIN") return true;
+    return (dashUser.feature_access ?? []).includes(feature);
+  };
+
   const refreshDashUser = async () => {
     if (!authUser) return;
     await syncDashUser(authUser, false);
@@ -318,6 +330,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       logout,
       hasPermission,
+      hasFeature,
       refreshDashUser,
     }),
     [authUser, dashUser, isLoggedIn, isLoading]

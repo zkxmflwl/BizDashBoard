@@ -17,6 +17,7 @@ import {
   Eye,
   ChevronDown,
   ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import { useState } from 'react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
@@ -31,6 +32,13 @@ const dashboardItem: NavItem = {
   title: '대시보드',
   url: '/',
   icon: LayoutDashboard,
+};
+
+// 영업 현황: feature_access 'sales_overview' 보유자와 ADMIN에게만 노출
+const salesOverviewItem: NavItem = {
+  title: '영업 현황',
+  url: '/sales-overview',
+  icon: TrendingUp,
 };
 
 const businessNavItems: NavItem[] = [
@@ -63,7 +71,10 @@ const roleLabel: Record<string, string> = {
 type GroupKey = 'business' | 'strategy' | 'general' | 'admin';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { dashUser, logout, hasPermission } = useAuth();
+  const { dashUser, logout, hasPermission, hasFeature } = useAuth();
+  const businessItems = hasFeature('sales_overview')
+    ? [salesOverviewItem, ...businessNavItems]
+    : businessNavItems;
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<GroupKey, boolean>>({
     business: true,
@@ -162,7 +173,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <nav className="flex-1 space-y-2 px-2 py-4 overflow-y-auto">
           {renderNavItem(dashboardItem)}
-          {renderGroup('business', '사업부', businessNavItems)}
+          {renderGroup('business', '사업부', businessItems)}
           {renderGroup('strategy', '전략', strategyNavItems)}
           {renderGroup('general', '총무', generalAffairsNavItems)}
           {renderGroup('admin', '관리자 전용', adminNavItems, true)}

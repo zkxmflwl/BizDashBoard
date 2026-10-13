@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useDashboardStats, useDeptSummary } from '@/hooks/useDashboardStats';
+import { isNewDepartment } from '@/services/dashboardService';
 import { useAvailableMonths } from '@/hooks/useSalesData';
 import { useTangibleAssets } from '@/hooks/useTangibleAssets';
 import { useIntangibleAssets } from '@/hooks/useIntangibleAssets';
@@ -28,6 +29,9 @@ export default function Dashboard() {
   const [selectedSector, setSelectedSector] = useState<string | null>(null); // null = 전체
   const gridRef = useRef<HTMLDivElement>(null);
   const [chartMode, setChartMode] = useState<'cumulative' | 'monthly'>('cumulative');
+  // 제한 부서(자회사) 포함 여부: 열람 권한자에게만 토글이 보이며 기본은 제외
+  const [includeSubsidiary, setIncludeSubsidiary] = useState(false);
+  const activeYear = Number(activeMonth.split('-')[0]) || new Date().getFullYear();
 
   // 부문 목록 (sort_order 우선)
   const sectors = useMemo(() => {
@@ -81,47 +85,55 @@ export default function Dashboard() {
     });
   }, [deptRows, sortKey, sortDir]);
 
-  // 부문 필터링 적용된 행
-  const filteredDeptRows = useMemo(() => {
-    if (!sectorDeptCodes) return sortedDeptRows;
-    return sortedDeptRows.filter(r => sectorDeptCodes.has(r.departmentCode));
-  }, [sortedDeptRows, sectorDeptCodes]);
+  // 제한 부서(자회사) 행이 보이는지 (열람 권한이 있을 때만 데이터가 내려옴)
+  const hasRestrictedRows = useMemo(() => deptRows.some(r => r.isRestricted), [deptRows]);
 
-  // 카드용 stats: 부문 선택 시 클라이언트에서 재계산
+  // 실제 적용할 부서 집합: 부문 선택 > 자회사 제외(기본) > 전체
+  const effectiveDeptCodes = useMemo(() => {
+    if (sectorDeptCodes) return sectorDeptCodes;
+    if (hasRestrictedRows && !includeSubsidiary) {
+      return new Set(deptRows.filter(r => !r.isRestricted).map(r => r.departmentCode));
+    }
+    return null;
+  }, [sectorDeptCodes, hasRestrictedRows, includeSubsidiary, deptRows]);
+
+  // 필터링 적용된 행
+  const filteredDeptRows = useMemo(() => {
+    if (!effectiveDeptCodes) return sortedDeptRows;
+    return sortedDeptRows.filter(r => effectiveDeptCodes.has(r.departmentCode));
+  }, [sortedDeptRows, effectiveDeptCodes]);
+
+  // 카드용 stats: 부문 선택·자회사 제외 시 행 단위로 재계산 (전년 누적도 행에 포함되어 있음)
   const displayStats = useMemo(() => {
-    if (!sectorDeptCodes) return stats;
-    let ytdSales = 0, ytdPurchase = 0;
-    let yoySales = 0, hasYoY = false;
+    if (!effectiveDeptCodes) return stats;
+    let ytdSales = 0, ytdPurchase = 0, prevYtdSales = 0, prevYtdPurchase = 0;
     let activeProjects = 0, monthlyOrders = 0;
     for (const r of filteredDeptRows) {
       ytdSales += r.ytdSales;
       ytdPurchase += r.ytdPurchase;
+      prevYtdSales += r.prevYtdSales ?? 0;
+      prevYtdPurchase += r.prevYtdPurchase ?? 0;
       activeProjects += r.activeProjects;
       monthlyOrders += r.monthlyOrders;
-      if (r.yoyChange !== null) {
-        yoySales += r.yoyChange;
-        hasYoY = true;
-      }
     }
     return {
       ytdSales,
       ytdPurchase,
       ytdNetSales: ytdSales - ytdPurchase,
-      // 매출 YoY만 dept 단위로 재구성 가능 (매입/순매출 YoY는 서버 데이터 부재)
-      prevYtdSales: hasYoY ? ytdSales - yoySales : 0,
-      prevYtdPurchase: 0,
-      prevYtdNetSales: 0,
+      prevYtdSales,
+      prevYtdPurchase,
+      prevYtdNetSales: prevYtdSales - prevYtdPurchase,
       activeProjectCount: activeProjects,
       monthlyOrderCount: monthlyOrders,
     };
-  }, [stats, filteredDeptRows, sectorDeptCodes]);
+  }, [stats, filteredDeptRows, effectiveDeptCodes]);
 
-  // 차트용: 단일 행 선택 > 부문 > 전체
+  // 차트용: 단일 행 선택 > 부문/자회사 제외 > 전체
   const chartDeptCodes = useMemo(() => {
     if (selectedDeptCode) return [selectedDeptCode];
-    if (sectorDeptCodes) return Array.from(sectorDeptCodes);
+    if (effectiveDeptCodes) return Array.from(effectiveDeptCodes);
     return undefined;
-  }, [selectedDeptCode, sectorDeptCodes]);
+  }, [selectedDeptCode, effectiveDeptCodes]);
 
   const isLoading = statsLoading || tangibleLoading || intangibleLoading;
 
@@ -208,6 +220,17 @@ export default function Dashboard() {
               {s.name}
             </button>
           ))}
+          {hasRestrictedRows && selectedSector === null && (
+            <label className="ml-auto flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={includeSubsidiary}
+                onChange={(e) => setIncludeSubsidiary(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-border accent-primary"
+              />
+              자회사 포함
+            </label>
+          )}
         </div>
       )}
 
@@ -272,14 +295,33 @@ export default function Dashboard() {
                   onClick={() => setSelectedDeptCode(prev => prev === row.departmentCode ? null : row.departmentCode)}
                   className={`border-b border-border/50 cursor-pointer transition-colors ${selectedDeptCode === row.departmentCode ? 'bg-primary/10 hover:bg-primary/15' : 'hover:bg-muted/30'}`}
                 >
-                  <td className="border-r border-border/50 px-3 py-2 text-foreground font-medium">{row.departmentName}</td>
+                  <td className="border-r border-border/50 px-3 py-2 text-foreground font-medium whitespace-nowrap">
+                    {row.departmentName}
+                    {isNewDepartment(row.establishedMonth, activeYear) && (
+                      <span className="ml-1.5 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-normal text-emerald-700" title="전년 동기 데이터가 없는 신설·분리 부서">
+                        신설 {row.establishedMonth}
+                      </span>
+                    )}
+                    {row.isRestricted && (
+                      <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-normal text-amber-700">자회사</span>
+                    )}
+                  </td>
                   <td className="border-r border-border/50 px-3 py-2 text-right text-foreground">{formatDashboardAmount(row.ytdSales)}</td>
                   <td className="border-r border-border/50 px-3 py-2 text-right text-foreground">{formatDashboardAmount(row.ytdPurchase)}</td>
                   <td className="border-r border-border/50 px-3 py-2 text-right text-foreground">{formatDashboardAmount(row.ytdNetSales)}</td>
                   <td className="border-r border-border/50 px-3 py-2 text-right">
-                    {row.yoyChange === null ? <span className="text-muted-foreground">-</span> : (
-                      <span className={row.yoyChange > 0 ? 'text-red-500' : row.yoyChange < 0 ? 'text-blue-500' : 'text-foreground'}>
-                        {row.yoyChange > 0 ? '+' : ''}{formatDashboardAmount(row.yoyChange)}
+                    {row.yoyChange === null ? (
+                      <span className="text-muted-foreground" title="전년 동기 데이터 없음 (신설·분리 부서)">-</span>
+                    ) : (
+                      <span className="whitespace-nowrap">
+                        <span className={row.yoyChange > 0 ? 'text-red-500' : row.yoyChange < 0 ? 'text-blue-500' : 'text-foreground'}>
+                          {row.yoyChange > 0 ? '+' : ''}{formatDashboardAmount(row.yoyChange)}
+                        </span>
+                        {row.yoyIncludes.length > 0 && (
+                          <span className="ml-1 text-[10px] text-muted-foreground" title="분리 전 범위와 비교하기 위해 승계 부서의 당해 누적을 합산한 값">
+                            ({row.yoyIncludes.join(', ')} 포함)
+                          </span>
+                        )}
                       </span>
                     )}
                   </td>

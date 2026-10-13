@@ -5,7 +5,7 @@ import { useAvailableDeptMonths } from '@/hooks/useSalesData';
 import { fetchSalesSummary, SalesSummaryRow } from '@/services/salesService';
 import { fetchProjectsByDeptAndStatus, fetchOngoingProjectsByDept, fetchProjectsOrdered } from '@/services/businessProjectService';
 import { formatKRW, formatMonthlyAmount } from '@/data/mockData';
-import { Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 // Gantt bar colors by category
 const CATEGORY_COLORS = [
@@ -21,38 +21,8 @@ function getPrevMonthKey(monthKey: string): string {
   return `${y}-${String(m - 1).padStart(2, '0')}`;
 }
 
-
-//전년대비 
-function getPrevYearSameMonthKey(monthKey: string): string {
-  if (!monthKey) return '';
-  const [y, m] = monthKey.split('-').map(Number);
-  return `${y - 1}-${String(m).padStart(2, '0')}`;
-}
-
-function ChangeIndicator({ current, previous }: {
-  current: number;
-  previous: number | null;
-}) {
-  if (previous === null) {
-    return <p className="mt-1 text-xs text-muted-foreground">-</p>;
-  }
-
-  const diff = current - previous;
-
-  if (diff === 0) {
-    return <p className="mt-1 text-xs text-muted-foreground">YoY -</p>;
-  }
-
-  return (
-    <p className={`mt-1 flex items-center gap-0.5 text-xs ${diff > 0 ? 'text-red-500' : 'text-blue-500'}`}>
-      {diff > 0
-        ? <TrendingUp className="h-3 w-3" />
-        : <TrendingDown className="h-3 w-3" />
-      }
-      YoY {diff > 0 ? '+' : ''}{formatMonthlyAmount(diff)}
-    </p>
-  );
-}
+// 당월 매출·매입·순매출의 전년 동월 대비(YoY)는 계약 시점에 따라 월별 편차가 커 의미가 없어 표시하지 않는다.
+// 전년 비교는 대시보드의 누적 기준을 사용한다.
 
 export default function DepartmentMonthlyReport() {
   const { data: departments = [] } = useDepartments();
@@ -70,7 +40,6 @@ export default function DepartmentMonthlyReport() {
 
   const activeMonth = selectedMonth || months[0] || '';
   const prevMonth = getPrevMonthKey(activeMonth);
-  const prevYearSameMonth = getPrevYearSameMonthKey(activeMonth);
   const activeYear = activeMonth ? Number(activeMonth.split('-')[0]) : new Date().getFullYear();
 
   const deptName = departments.find(d => d.department_code === activeDept)?.department_name || activeDept;
@@ -88,24 +57,12 @@ export default function DepartmentMonthlyReport() {
     enabled: !!prevMonth,
   });
 
-
-  const { data: prevYearData = [] } = useQuery({
-    queryKey: ['dept-sales', activeDept, prevYearSameMonth],
-    queryFn: () => fetchSalesSummary(prevYearSameMonth),
-    enabled: !!activeDept && !!prevYearSameMonth,
-  });
-  
   const deptCurrent = currentMonthData.find(r => r.department_code === activeDept);
-  
   const deptMonthPrev = prevMonthData.find(r => r.department_code === activeDept);
-  const deptYearPrev = prevYearData.find(r => r.department_code === activeDept);
 
   const curSales = Number(deptCurrent?.sales_amount || 0);
   const curPurchase = Number(deptCurrent?.purchase_amount || 0);
   const curNetSales = curSales - curPurchase;
-  const prevSales = deptYearPrev ? Number(deptYearPrev.sales_amount || 0) : null;
-  const prevPurchase = deptYearPrev ? Number(deptYearPrev.purchase_amount || 0) : null;
-  const prevNetSales = prevSales !== null && prevPurchase !== null ? prevSales - prevPurchase : null;
 
   // Ongoing projects (프로젝트 중)
   const { data: ongoingProjects = [] } = useQuery({
@@ -210,17 +167,14 @@ export default function DepartmentMonthlyReport() {
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">당월 매출</p>
           <p className="mt-1 text-lg font-bold text-foreground">{formatMonthlyAmount(curSales)}원</p>
-          <ChangeIndicator current={curSales} previous={prevSales}  />
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">당월 매입</p>
           <p className="mt-1 text-lg font-bold text-foreground">{formatMonthlyAmount(curPurchase)}원</p>
-          <ChangeIndicator current={curPurchase} previous={prevPurchase} />
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">당월 순매출</p>
           <p className="mt-1 text-lg font-bold text-foreground">{formatMonthlyAmount(curNetSales)}원</p>
-          <ChangeIndicator current={curNetSales} previous={prevNetSales} />
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">부서 현황</p>

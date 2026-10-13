@@ -16,6 +16,7 @@ import ProjectManage from "./pages/ProjectManage";
 import SectorProjectManage from "./pages/SectorProjectManage";
 import SectorProjectView from "./pages/SectorProjectView";
 import AdminUsers from "./pages/AdminUsers";
+import SalesOverview from "./pages/SalesOverview";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -40,11 +41,14 @@ function FullPageSpinner() {
 function ProtectedRoute({
   children,
   adminOnly = false,
+  feature,
 }: {
   children: React.ReactNode;
   adminOnly?: boolean;
+  /** feature_access에 이 값이 있거나 ADMIN일 때만 접근 허용 */
+  feature?: string;
 }) {
-  const { authUser, dashUser, isLoggedIn, isLoading, logout } = useAuth();
+  const { authUser, dashUser, isLoggedIn, isLoading, logout, hasFeature } = useAuth();
 
   if (isLoading) return <FullPageSpinner />;
 
@@ -74,6 +78,10 @@ function ProtectedRoute({
   if (!isLoggedIn) return <Navigate to="/login" replace />;
 
   if (adminOnly && dashUser.role_code !== "ADMIN") {
+    return <Navigate to="/" replace />;
+  }
+
+  if (feature && !hasFeature(feature)) {
     return <Navigate to="/" replace />;
   }
 
@@ -154,6 +162,14 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <DepartmentMonthlyData />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/sales-overview",
+    element: (
+      <ProtectedRoute feature="sales_overview">
+        <SalesOverview />
       </ProtectedRoute>
     ),
   },
