@@ -168,7 +168,7 @@ const router = createBrowserRouter([
   {
     path: "/sales-overview",
     element: (
-      <ProtectedRoute feature="sales_overview">
+      <ProtectedRoute>
         <SalesOverview />
       </ProtectedRoute>
     ),
