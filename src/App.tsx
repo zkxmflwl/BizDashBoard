@@ -88,6 +88,12 @@ function ProtectedRoute({
   return <AppLayout>{children}</AppLayout>;
 }
 
+/** 첫 화면: 부서가 있는 사용자는 영업 현황, 부서가 없는 사용자(관리자·전사 열람)는 대시보드 */
+function HomeRedirect() {
+  const { dashUser } = useAuth();
+  return <Navigate to={dashUser?.department_code ? "/sales-overview" : "/dashboard"} replace />;
+}
+
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, isLoading } = useAuth();
 
@@ -111,6 +117,14 @@ const router = createBrowserRouter([
   },
   {
     path: "/",
+    element: (
+      <ProtectedRoute>
+        <HomeRedirect />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/dashboard",
     element: (
       <ProtectedRoute>
         <Dashboard />

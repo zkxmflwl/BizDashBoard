@@ -30,7 +30,7 @@ type NavItem = {
 
 const dashboardItem: NavItem = {
   title: '대시보드',
-  url: '/',
+  url: '/dashboard',
   icon: LayoutDashboard,
 };
 
