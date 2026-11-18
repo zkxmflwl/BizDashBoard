@@ -77,6 +77,14 @@ describe("경제지표·뉴스 화면", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe("http://127.0.0.1:8787/market.json");
 
+    // 화면 순서: 뉴스, 환율, 증시, 금리
+    expect(screen.getAllByRole("region").map((section) => section.getAttribute("aria-label"))).toEqual([
+      "경제 뉴스",
+      "환율",
+      "증시",
+      "금리",
+    ]);
+
     const configs = MARKET_GROUPS.flatMap((g) => g.items);
     expect(configs).toHaveLength(10);
     for (const config of configs) {

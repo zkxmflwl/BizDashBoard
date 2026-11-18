@@ -35,6 +35,7 @@ export interface MarketGroupConfig {
   items: MarketItemConfig[];
 }
 
+/** 화면에는 이 배열에 적힌 순서(환율, 증시, 금리)대로 나온다 */
 export const MARKET_GROUPS: MarketGroupConfig[] = [
   {
     id: "fx",
@@ -64,6 +65,36 @@ export const MARKET_GROUPS: MarketGroupConfig[] = [
         decimals: 2,
         changeUnit: "",
         link: "https://stock.naver.com/marketindex/exchange/FX_CNYKRW/price",
+      },
+    ],
+  },
+  {
+    id: "stocks",
+    title: "증시",
+    items: [
+      {
+        id: "kospi",
+        label: "코스피",
+        unit: "",
+        decimals: 2,
+        changeUnit: "",
+        link: "https://stock.naver.com/domestic/index/KOSPI/price",
+      },
+      {
+        id: "kosdaq",
+        label: "코스닥",
+        unit: "",
+        decimals: 2,
+        changeUnit: "",
+        link: "https://stock.naver.com/domestic/index/KOSDAQ/price",
+      },
+      {
+        id: "nasdaq",
+        label: "나스닥",
+        unit: "",
+        decimals: 2,
+        changeUnit: "",
+        link: "https://stock.naver.com/worldstock/index/.IXIC/price",
       },
     ],
   },
@@ -105,36 +136,6 @@ export const MARKET_GROUPS: MarketGroupConfig[] = [
         decimals: 3,
         changeUnit: "%p",
         link: "https://stock.naver.com/marketindex/bond/US10YT=RR",
-      },
-    ],
-  },
-  {
-    id: "stocks",
-    title: "증시",
-    items: [
-      {
-        id: "kospi",
-        label: "코스피",
-        unit: "",
-        decimals: 2,
-        changeUnit: "",
-        link: "https://stock.naver.com/domestic/index/KOSPI/price",
-      },
-      {
-        id: "kosdaq",
-        label: "코스닥",
-        unit: "",
-        decimals: 2,
-        changeUnit: "",
-        link: "https://stock.naver.com/domestic/index/KOSDAQ/price",
-      },
-      {
-        id: "nasdaq",
-        label: "나스닥",
-        unit: "",
-        decimals: 2,
-        changeUnit: "",
-        link: "https://stock.naver.com/worldstock/index/.IXIC/price",
       },
     ],
   },
