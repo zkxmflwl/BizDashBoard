@@ -18,14 +18,24 @@ import {
   ChevronDown,
   ChevronRight,
   TrendingUp,
+  Activity,
 } from 'lucide-react';
 import { useState } from 'react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
+import { MARKET_TEST_PATH } from '@/config/marketConfig';
+import { useIsFirstAdmin } from '@/hooks/useIsFirstAdmin';
 
 type NavItem = {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
+};
+
+// 경제지표·뉴스(테스트): 최초관리자에게만 메뉴 최상단에 노출
+const marketTestItem: NavItem = {
+  title: '경제지표·뉴스',
+  url: MARKET_TEST_PATH,
+  icon: Activity,
 };
 
 const dashboardItem: NavItem = {
@@ -72,6 +82,7 @@ type GroupKey = 'business' | 'strategy' | 'general' | 'admin';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { dashUser, logout, hasPermission, hasFeature } = useAuth();
+  const { isFirstAdmin } = useIsFirstAdmin();
   const businessItems = hasFeature('sales_overview')
     ? [salesOverviewItem, ...businessNavItems]
     : businessNavItems;
@@ -172,6 +183,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 space-y-2 px-2 py-4 overflow-y-auto">
+          {isFirstAdmin && renderNavItem(marketTestItem)}
           {renderNavItem(dashboardItem)}
           {renderGroup('business', '사업부', businessItems)}
           {renderGroup('strategy', '전략', strategyNavItems)}

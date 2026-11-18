@@ -17,6 +17,9 @@ import SectorProjectManage from "./pages/SectorProjectManage";
 import SectorProjectView from "./pages/SectorProjectView";
 import AdminUsers from "./pages/AdminUsers";
 import SalesOverview from "./pages/SalesOverview";
+import MarketTest from "./pages/MarketTest";
+import { FirstAdminLanding, FirstAdminOnly } from "@/components/market/FirstAdminGate";
+import { MARKET_TEST_PATH } from "@/config/marketConfig";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -113,7 +116,20 @@ const router = createBrowserRouter([
     path: "/",
     element: (
       <ProtectedRoute>
-        <Dashboard />
+        {/* 최초관리자는 로그인 후 첫 진입 때 경제지표 화면으로 이동한다 */}
+        <FirstAdminLanding>
+          <Dashboard />
+        </FirstAdminLanding>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: MARKET_TEST_PATH,
+    element: (
+      <ProtectedRoute adminOnly>
+        <FirstAdminOnly>
+          <MarketTest />
+        </FirstAdminOnly>
       </ProtectedRoute>
     ),
   },

@@ -42,6 +42,21 @@ npm run dev            # http://localhost:8080
 - 엣지 함수: `supabase/functions/admin-users` (관리자 전용 사용자 생성·관리, 서비스 롤 키 사용)
 - 프로젝트 ref: `supabase/config.toml`
 
+## 경제지표·뉴스 테스트 화면
+
+최초관리자(활성 ADMIN 중 가장 먼저 생성된 계정)에게만 보이는 화면입니다(`/market-test`). 브라우저는 외부 사이트를 호출하지 않고, 수집기가 기록한 캐시 JSON만 60초마다 읽습니다.
+
+```sh
+npm run market:collector                  # 로컬 수집기 (http://127.0.0.1:8787/market.json), Node 24 이상
+npm run market:collector -- --simulate    # 지수 원천을 호출하지 않고 모의 값으로 1분 갱신 확인
+npm run dev                               # 다른 터미널에서 화면 실행
+```
+
+- 수집기 코드: `supabase/functions/_shared/market/` (소스별 provider는 `providers/`, 등록은 `providers/index.ts`)
+- 외부 링크와 표시 이름: `src/config/marketConfig.ts`
+- API 키(`EXIM_API_KEY`, `ECOS_API_KEY`, `FRED_API_KEY`)는 `.env.local`에 둡니다. 키가 있는 항목은 공식 API를 하루 1회 읽고, 키가 없는 항목은 네이버 증권 시장지표 JSON(비공식)의 실제 값을 1시간마다 읽습니다. 그 소스가 막히면 샘플로 표시됩니다.
+- 배포 환경용 수집기(`supabase/functions/market-collector`)와 설정 SQL(`supabase/setup/market_collector_setup.sql`)은 작성만 된 상태이며 아직 적용하지 않았습니다.
+
 ## 화면 구성
 
 - 대시보드: 월별 YTD 매출·매입·순매출, 전년 대비, 부서별 그리드와 월별 차트
