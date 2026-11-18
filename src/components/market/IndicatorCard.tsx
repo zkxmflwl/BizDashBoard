@@ -79,6 +79,13 @@ interface IndicatorCardProps {
  */
 function IndicatorCardInner({ config, item }: IndicatorCardProps) {
   const asOf = item ? formatAsOf(item) : null;
+  // 아이콘은 마지막 글자 덩어리에 붙여 아이콘만 따로 줄바꿈되지 않게 한다.
+  const linkIcon = (
+    <ExternalLink
+      className="ml-1 inline h-3 w-3 align-[-1px] opacity-0 transition-opacity group-hover:opacity-60"
+      aria-hidden="true"
+    />
+  );
 
   return (
     <a
@@ -86,14 +93,23 @@ function IndicatorCardInner({ config, item }: IndicatorCardProps) {
       target="_blank"
       rel="noopener noreferrer"
       data-testid={`indicator-${config.id}`}
-      className="glass-card group block rounded-xl px-4 py-3.5 transition-colors hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="glass-card group flex flex-col rounded-xl px-4 py-3.5 transition-colors hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="flex items-center gap-1 text-sm text-muted-foreground">
-          {config.label}
-          <ExternalLink className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-60" aria-hidden="true" />
+      {/* 이름이 두 줄이 되는 카드가 섞여도 같은 줄의 카드끼리 값의 높이가 맞도록 남는 공간은 이 영역이 가져간다 */}
+      <div className="flex flex-1 items-start justify-between gap-2">
+        <p className="flex min-w-0 flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
+          {/* 한 줄에 들어가면 한 줄로, 안 들어가면 보조 설명만 통째로 다음 줄로 내려간다 */}
+          <span className="whitespace-nowrap">
+            {config.label}
+            {!config.note && linkIcon}
+          </span>
+          {config.note && (
+            <span className="whitespace-nowrap">
+              ({config.note}){linkIcon}
+            </span>
+          )}
         </p>
-        <div className="flex flex-wrap justify-end gap-1">
+        <div className="flex shrink-0 flex-wrap justify-end gap-1">
           {item ? (
             <>
               {/* 수집에 실패한 값을 실시간이라고 표시하지 않는다. 장 마감, 일 1회, 샘플은 오류와 함께 표시한다 */}

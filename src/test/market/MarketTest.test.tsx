@@ -127,6 +127,12 @@ describe("경제지표·뉴스 화면", () => {
     expect(jpy).toHaveTextContent("11/18 22:12 기준");
 
     expect(screen.getByTestId("indicator-ust10y")).toHaveTextContent("샘플");
+
+    // 이름 뒤의 보조 설명
+    expect(screen.getByTestId("indicator-ktb3y")).toHaveTextContent("국고채 3년(대표 시장금리)");
+    expect(screen.getByTestId("indicator-ust10y")).toHaveTextContent("미 국채 10년(대표 시장금리)");
+    expect(screen.getByTestId("indicator-usPolicyRate")).toHaveTextContent("미국 기준금리(상단)");
+    expect(screen.getByTestId("indicator-jpykrw")).toHaveTextContent("원/엔(100엔)");
   });
 
   it("60초마다 캐시를 다시 읽어 페이지를 새로 고치지 않고 숫자만 바꾼다", async () => {

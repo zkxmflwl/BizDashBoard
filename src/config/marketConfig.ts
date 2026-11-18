@@ -17,6 +17,8 @@ export const COLLECTOR_STALE_MS = 3 * 60_000;
 export interface MarketItemConfig {
   id: string;
   label: string;
+  /** 이름 뒤에 괄호로 붙는 보조 설명. 카드가 좁으면 이 부분만 다음 줄로 내려간다 */
+  note?: string;
   /** 값 뒤에 붙는 단위 */
   unit: string;
   /** 값과 변동의 소수 자리수 */
@@ -48,7 +50,8 @@ export const MARKET_GROUPS: MarketGroupConfig[] = [
       },
       {
         id: "jpykrw",
-        label: "원/엔 (100엔)",
+        label: "원/엔",
+        note: "100엔",
         unit: "원",
         decimals: 2,
         changeUnit: "",
@@ -78,7 +81,8 @@ export const MARKET_GROUPS: MarketGroupConfig[] = [
       },
       {
         id: "usPolicyRate",
-        label: "미국 기준금리 (상단)",
+        label: "미국 기준금리",
+        note: "상단",
         unit: "%",
         decimals: 2,
         changeUnit: "%p",
@@ -87,6 +91,7 @@ export const MARKET_GROUPS: MarketGroupConfig[] = [
       {
         id: "ktb3y",
         label: "국고채 3년",
+        note: "대표 시장금리",
         unit: "%",
         decimals: 3,
         changeUnit: "%p",
@@ -95,6 +100,7 @@ export const MARKET_GROUPS: MarketGroupConfig[] = [
       {
         id: "ust10y",
         label: "미 국채 10년",
+        note: "대표 시장금리",
         unit: "%",
         decimals: 3,
         changeUnit: "%p",
