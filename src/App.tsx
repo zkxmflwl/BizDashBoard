@@ -18,7 +18,7 @@ import SectorProjectView from "./pages/SectorProjectView";
 import AdminUsers from "./pages/AdminUsers";
 import SalesOverview from "./pages/SalesOverview";
 import MarketTest from "./pages/MarketTest";
-import { FirstAdminLanding, FirstAdminOnly } from "@/components/market/FirstAdminGate";
+import { FirstAdminHome, FirstAdminOnly } from "@/components/market/FirstAdminGate";
 import { MARKET_TEST_PATH } from "@/config/marketConfig";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -91,6 +91,12 @@ function ProtectedRoute({
   return <AppLayout>{children}</AppLayout>;
 }
 
+/** 첫 화면: 부서가 있는 사용자는 영업 현황, 부서가 없는 사용자(관리자·전사 열람)는 대시보드 */
+function HomeRedirect() {
+  const { dashUser } = useAuth();
+  return <Navigate to={dashUser?.department_code ? "/sales-overview" : "/dashboard"} replace />;
+}
+
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, isLoading } = useAuth();
 
@@ -116,10 +122,10 @@ const router = createBrowserRouter([
     path: "/",
     element: (
       <ProtectedRoute>
-        {/* 최초관리자는 로그인 후 첫 진입 때 경제지표 화면으로 이동한다 */}
-        <FirstAdminLanding>
-          <Dashboard />
-        </FirstAdminLanding>
+        {/* 최초관리자의 첫 화면은 경제지표, 그 외 사용자는 HomeRedirect의 분기를 따른다 */}
+        <FirstAdminHome>
+          <HomeRedirect />
+        </FirstAdminHome>
       </ProtectedRoute>
     ),
   },
@@ -130,6 +136,14 @@ const router = createBrowserRouter([
         <FirstAdminOnly>
           <MarketTest />
         </FirstAdminOnly>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/dashboard",
+    element: (
+      <ProtectedRoute>
+        <Dashboard />
       </ProtectedRoute>
     ),
   },
@@ -184,7 +198,7 @@ const router = createBrowserRouter([
   {
     path: "/sales-overview",
     element: (
-      <ProtectedRoute feature="sales_overview">
+      <ProtectedRoute>
         <SalesOverview />
       </ProtectedRoute>
     ),

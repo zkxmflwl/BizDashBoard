@@ -38,10 +38,8 @@ interface EditableUser {
   feature_access: string[];
 }
 
-/** 화면 기능 권한 목록 (feature_access 값과 표시명) */
-const FEATURES: { key: string; label: string }[] = [
-  { key: 'sales_overview', label: '영업 현황' },
-];
+/** 화면 기능 권한 목록 (feature_access 값과 표시명). 영업 현황은 전원 공개로 바뀌어 현재 항목 없음 */
+const FEATURES: { key: string; label: string }[] = [];
 
 const sameSet = (a: string[], b: string[]) => [...a].sort().join(',') === [...b].sort().join(',');
 const toggleIn = (list: string[], value: string, on: boolean) =>
@@ -381,6 +379,8 @@ export default function AdminUsers() {
                     <td className={`px-4 py-3 ${changed.perms ? 'bg-primary/5' : ''}`}>
                       {isAdminRole ? (
                         <span className="text-xs text-muted-foreground">전체 (ADMIN)</span>
+                      ) : FEATURES.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">-</span>
                       ) : (
                         <div className="flex flex-wrap gap-3">
                           {FEATURES.map(f => (

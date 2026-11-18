@@ -17,7 +17,7 @@ import {
   Eye,
   ChevronDown,
   ChevronRight,
-  TrendingUp,
+  Handshake,
   Activity,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -40,18 +40,12 @@ const marketTestItem: NavItem = {
 
 const dashboardItem: NavItem = {
   title: '대시보드',
-  url: '/',
+  url: '/dashboard',
   icon: LayoutDashboard,
 };
 
-// 영업 현황: feature_access 'sales_overview' 보유자와 ADMIN에게만 노출
-const salesOverviewItem: NavItem = {
-  title: '영업 현황',
-  url: '/sales-overview',
-  icon: TrendingUp,
-};
-
 const businessNavItems: NavItem[] = [
+  { title: '영업 현황', url: '/sales-overview', icon: Handshake },
   { title: '월간 보고', url: '/department-report', icon: FileText },
   { title: '월별 데이터', url: '/DepartmentMonthlyData', icon: BarChart3 },
   { title: '프로젝트 데이터', url: '/projects', icon: FolderKanban },
@@ -81,11 +75,8 @@ const roleLabel: Record<string, string> = {
 type GroupKey = 'business' | 'strategy' | 'general' | 'admin';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { dashUser, logout, hasPermission, hasFeature } = useAuth();
+  const { dashUser, logout, hasPermission } = useAuth();
   const { isFirstAdmin } = useIsFirstAdmin();
-  const businessItems = hasFeature('sales_overview')
-    ? [salesOverviewItem, ...businessNavItems]
-    : businessNavItems;
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<GroupKey, boolean>>({
     business: true,
@@ -185,7 +176,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 space-y-2 px-2 py-4 overflow-y-auto">
           {isFirstAdmin && renderNavItem(marketTestItem)}
           {renderNavItem(dashboardItem)}
-          {renderGroup('business', '사업부', businessItems)}
+          {renderGroup('business', '사업부', businessNavItems)}
           {renderGroup('strategy', '전략', strategyNavItems)}
           {renderGroup('general', '총무', generalAffairsNavItems)}
           {renderGroup('admin', '관리자 전용', adminNavItems, true)}
